@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: fmt, validate, terraform test, plan, tfwarden
+    runs-on: ubuntu-latest
+    env:
+      TF_IN_AUTOMATION: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.16.4
+          terraform_wrapper: false
+      - run: terraform fmt -recursive -check
+      - run: terraform init -backend=false -input=false
+      - run: terraform validate
+      - name: terraform test (AWS provider mocked, fully offline)
+        run: terraform test
+      - name: validate the example
+        working-directory: examples/complete
+        run: terraform init -backend=false -input=false && terraform validate
+      - name: plan the example without an AWS account
+        run: ./scripts/offline-plan.sh
+      - name: No credential in the plan (docs/adr/0001)
+        run: |
+          node -e '
+            const p = require("./plan.json");
+            const keys = ["password", "password_wo", "auth_token", "auth_token_wo", "secret_string", "secret_string_wo"];
+            const hits = p.resource_changes
+              .filter((r) => r.change.after && typeof r.change.after === "object")
+              .flatMap((r) => keys.filter((k) => r.change.after[k] != null).map((k) => r.address + "." + k));
+            if (hits.length) { console.error("credential in plan:", hits); process.exit(1); }
+            console.log("no credential field has a value anywhere in the plan");'
+      - uses: actions/setup-go@v5
+        with: { go-version: '1.27' }
+      # v0.2.0: v0.1.0 cannot read split security-group rules or IPv6, and
+      # does not match resources inside a module to their configuration
+      # (three false failures on this plan). scripts/tfwarden-gate.sh
+      # proves the scanner can see this module, not just that it passes.
+      - run: go install github.com/sriharifortitude/tfwarden/cmd/tfwarden@v0.2.0
+      - run: ./scripts/tfwarden-gate.sh
