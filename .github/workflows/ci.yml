@@ -53,3 +53,18 @@ jobs:
       # proves the scanner can see this module, not just that it passes.
       - run: go install github.com/sriharifortitude/tfwarden/cmd/tfwarden@v0.2.0
       - run: ./scripts/tfwarden-gate.sh
+
+  secrets:
+    name: credsweep over the full commit history
+    runs-on: ubuntu-latest
+    steps:
+      # A shallow clone would let credsweep report a false all-clear.
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-go@v5
+        with: { go-version: '1.27' }
+      # v0.1.2, not earlier: v0.1.1 reports 14 lines of this module as
+      # secrets (references like var.credentials_version, and URLs built
+      # from ${...}); none are. That is the bug v0.1.2 fixes.
+      - run: go install github.com/sriharifortitude/credsweep/cmd/credsweep@v0.1.2
+      - run: credsweep scan .
