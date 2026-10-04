@@ -20,8 +20,8 @@ jobs:
     env:
       TF_IN_AUTOMATION: 'true'
     steps:
-      - uses: actions/checkout@v4
-      - uses: hashicorp/setup-terraform@v3
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
         with:
           terraform_version: 1.16.4
           terraform_wrapper: false
@@ -45,7 +45,7 @@ jobs:
               .flatMap((r) => keys.filter((k) => r.change.after[k] != null).map((k) => r.address + "." + k));
             if (hits.length) { console.error("credential in plan:", hits); process.exit(1); }
             console.log("no credential field has a value anywhere in the plan");'
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with: { go-version: '1.27' }
       # v0.2.0: v0.1.0 cannot read split security-group rules or IPv6, and
       # does not match resources inside a module to their configuration
@@ -59,9 +59,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # A shallow clone would let credsweep report a false all-clear.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with: { fetch-depth: 0 }
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with: { go-version: '1.27' }
       # v0.1.2, not earlier: v0.1.1 reports 14 lines of this module as
       # secrets (references like var.credentials_version, and URLs built
